@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>HTML Code Extractor | Извлечение кода</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at 20% 30%, #f8fafc, #eef2f8);
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        /* главный контейнер — на всю ширину, без max-width */
+        .container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(0px);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        /* внутренний отступ — комфортное чтение даже на wide экранах */
+        .container-inner {
+            padding: 2rem 2rem 2rem 2rem;
+        }
+
+        /* шапка с заголовком и переключателем */
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #1e293b, #2d3e5f);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h1::before {
+            content: "🖥️";
+            font-size: 2rem;
+            background: none;
+            -webkit-background-clip: unset;
+            color: #3b82f6;
+        }
+
+        /* переключатель языков — современный */
+        .lang-toggle {
+            background: #eef2ff;
+            border-radius: 60px;
+            padding: 4px;
+            display: flex;
+            gap: 6px;
+            backdrop-filter: blur(4px);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .lang-option {
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lang-option.active {
+            background: white;
+            color: #0f172a;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        }
+
+        .subhead {
+            font-size: 1rem;
+            color: #475569;
+            margin-bottom: 2rem;
+            padding-left: 1rem;
+            border-left: 4px solid #3b82f6;
+            font-weight: 450;
+        }
+
+        /* улучшенная зона загрузки — с иконкой, анимацией */
+        .upload-zone {
+            background: #ffffffcc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 2rem;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-zone.drag-over {
+            border-color: #2563eb;
+            background: #eff6ff;
+            border-style: solid;
+            transform: scale(0.99);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+
+        .upload-btn {
+            background: #1e293b;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 60px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.15);
+            margin-top: 0.5rem;
+        }
+
+        .upload-btn:hover {
+            background: #0f172a;
+            transform: translateY(-2px);
+        }
+
+        .drag-hint {
+            font-size: 0.9rem;
+            color: #5b6e8c;
+            margin-top: 12px;
+        }
+
+        /* карточка информации о файле */
+        .file-meta {
+            background: #f1f5f9;
+            border-radius: 1.5rem;
+            padding: 0.9rem 1.5rem;
+            margin: 1rem 0 1.8rem 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+            backdrop-filter: blur(2px);
+        }
+
+        .file-meta span:first-child {
+            font-size: 1.3rem;
+        }
+
+        /* блок кода — тёмный, но с улучшенной читаемостью */
+        .code-panel {
+            background: #0b1120;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: #111827;
+            border-bottom: 1px solid #1f2a3e;
+        }
+
+        .code-header span:first-child {
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #8ba0bc;
+        }
+
+        .line-badge {
+            background: #1e2a3a;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: #b9d0f0;
+        }
+
+        pre {
+            margin: 0;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 60vh;
+            background: #0b1120;
+            padding: 1.5rem;
+            scrollbar-width: thin;
+            scrollbar-color: #3b4e6e #0b1120;
+        }
+
+        pre::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        pre::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 10px;
+        }
+        pre::-webkit-scrollbar-thumb {
+            background: #2d3e5f;
+            border-radius: 10px;
+        }
+        pre::-webkit-scrollbar-thumb:hover {
+            background: #4b6b8f;
+        }
+
+        code {
+            font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            white-space: pre;
+            display: block;
+        }
+
+        .copy-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            padding: 1rem 1.5rem 1.5rem;
+            background: #0b1120;
+        }
+
+        .copy-action {
+            background: #1f2a44;
+            border: none;
+            color: #eef2ff;
+            font-weight: 500;
+            padding: 0.6rem 1.6rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #334155;
+        }
+
+        .copy-action:hover:not(:disabled) {
+            background: #2d3e66;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .copy-action:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .footer-note {
+            margin-top: 1.5rem;
+            text-align: right;
+            font-size: 0.75rem;
+            color: #5d7188;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .empty-code-placeholder {
+            color: #6b7f9f;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 0.8rem;
+            }
+            .container-inner {
+                padding: 1.2rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            .upload-btn {
+                padding: 0.5rem 1.2rem;
+            }
+            pre {
+                padding: 1rem;
+            }
+        }
+
+        /* анимация для сообщений */
+        @keyframes fadeSlide {
+            0% { opacity: 0; transform: translateY(5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .file-meta, .upload-zone {
+            animation: fadeSlide 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="container-inner">
+        <div class="header-flex">
+            <h1 id="dynamicTitle">HTML Code Extractor</h1>
+            <div class="lang-toggle" id="langSwitch">
+                <button class="lang-option" data-lang="ru">🇷🇺 RU</button>
+                <button class="lang-option" data-lang="en">🇬🇧 EN</button>
+            </div>
+        </div>
+        <div class="subhead" id="subheadText">Загрузите .html файл — увидите его исходный код</div>
+
+        <!-- Drag & Drop зона -->
+        <div class="upload-zone" id="dropZone">
+            <div class="upload-icon">📂📄</div>
+            <div>
+                <button class="upload-btn" id="fileSelectBtn">📁 Выбрать файл</button>
+                <input type="file" id="fileInput" accept=".html,.htm,text/html" style="display: none;">
+            </div>
+            <div class="drag-hint" id="dragTextHint">или перетащите файл сюда</div>
+        </div>
+
+        <!-- информация о файле -->
+        <div class="file-meta" id="fileMetaPanel">
+            <span>📋</span>
+            <span id="fileInfoText">Файл не выбран</span>
+        </div>
+
+        <!-- блок с кодом -->
+        <div class="code-panel">
+            <div class="code-header">
+                <span id="codeHeaderLabel">📄 ИСХОДНЫЙ КОД HTML</span>
+                <span class="line-badge" id="lineCountDisplay">—</span>
+            </div>
+            <pre><code id="codeDisplay" class="empty-code-placeholder">// Здесь появится содержимое HTML-файла</code></pre>
+            <div class="copy-wrapper">
+                <button class="copy-action" id="copyCodeBtn" disabled>📋 Копировать код</button>
+            </div>
+        </div>
+        <div class="footer-note">
+            <span id="footerNote">⚡ Поддерживаются файлы .html, .htm</span>
+            <span style="opacity:0.6">📎 чистый код без лишнего</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---- МУЛЬТИЯЗЫЧНЫЙ СЛОВАРЬ ----
+        const locales = {
+            ru: {
+                title: "HTML Code Extractor",
+                subhead: "Загрузите .html файл — увидите его исходный код",
+                chooseBtn: "📁 Выбрать файл",
+                dragHint: "или перетащите файл сюда",
+                codeHeader: "📄 ИСХОДНЫЙ КОД HTML",
+                copyBtn: "📋 Копировать код",
+                footer: "⚡ Поддерживаются файлы .html, .htm",
+                noFile: "Файл не выбран",
+                emptyCode: "// Здесь появится содержимое HTML-файла",
+                fileInfo: (name, size, lines, linesWord) => `✅ ${name}  •  ${size}  •  ${lines} ${linesWord}`,
+                linesWord: (n) => {
+                    if (n % 10 === 1 && n % 100 !== 11) return "строка";
+                    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "строки";
+                    return "строк";
+                },
+                copySuccess: "✅ Скопировано!",
+                copyError: "❌ Ошибка копирования",
+                noCodeAlert: "Нет кода для копирования",
+                errors: {
+                    notHtml: "Пожалуйста, выберите HTML-файл (.html, .htm)",
+                    readFailed: "Не удалось прочитать файл"
+                }
+            },
+            en: {
+                title: "HTML Code Extractor",
+                subhead: "Upload an .html file — see its source code",
+                chooseBtn: "📁 Choose file",
+                dragHint: "or drag and drop file here",
+                codeHeader: "📄 SOURCE CODE (HTML)",
+                copyBtn: "📋 Copy code",
+                footer: "⚡ Supports .html, .htm files",
+                noFile: "No file selected",
+                emptyCode: "// HTML file content will appear here",
+                fileInfo: (name, size, lines, linesWord) => `✅ ${name}  •  ${size}  •  ${lines} ${linesWord}`,
+                linesWord: (n) => n === 1 ? "line" : "lines",
+                copySuccess: "✅ Copied!",
+                copyError: "❌ Copy failed",
+                noCodeAlert: "No code to copy",
+                errors: {
+                    notHtml: "Please select an HTML file (.html, .htm)",
+                    readFailed: "Failed to read file"
+                }
+            }
+        };
+
+        let currentLang = 'ru';
+        let currentCode = '';
+        let currentFileName = null;
+        let currentFileSize = null;
+        let currentLines = null;
+        let errorState = false;
+        let errorKey = '';
+
+        // DOM элементы
+        const titleEl = document.getElementById('dynamicTitle');
+        const subheadEl = document.getElementById('subheadText');
+        const chooseBtn = document.getElementById('fileSelectBtn');
+        const dragHintSpan = document.getElementById('dragTextHint');
+        const codeHeaderSpan = document.getElementById('codeHeaderLabel');
+        const copyBtn = document.getElementById('copyCodeBtn');
+        const footerSpan = document.getElementById('footerNote');
+        const fileInfoSpan = document.getElementById('fileInfoText');
+        const lineCountSpan = document.getElementById('lineCountDisplay');
+        const codeDisplay = document.getElementById('codeDisplay');
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+
+        // helpers
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function t(key, ...args) {
+            const keys = key.split('.');
+            let val = locales[currentLang];
+            for (let k of keys) {
+                if (val && val[k] !== undefined) val = val[k];
+                else return key;
+            }
+            if (typeof val === 'function') return val(...args);
+            return val;
+        }
+
+        function updateUIByLanguage() {
+            // статические элементы (без привязки к данным файла)
+            titleEl.textContent = t('title');
+            subheadEl.textContent = t('subhead');
+            chooseBtn.innerHTML = t('chooseBtn');
+            dragHintSpan.textContent = t('dragHint');
+            codeHeaderSpan.textContent = t('codeHeader');
+            copyBtn.innerHTML = t('copyBtn');
+            footerSpan.textContent = t('footer');
+
+            if (!errorState && currentCode && currentFileName !== null) {
+                // обновляем метаданные файла с учётом языка
+                const linesWord = t('linesWord', currentLines);
+                const sizeStr = formatBytes(currentFileSize);
+                const infoStr = t('fileInfo', currentFileName, sizeStr, currentLines, linesWord);
+                fileInfoSpan.innerHTML = infoStr;
+                lineCountSpan.textContent = `${currentLines} ${linesWord}`;
+                codeDisplay.textContent = currentCode;
+                codeDisplay.classList.remove('empty-code-placeholder');
+                copyBtn.disabled = false;
+            } 
+            else if (errorState) {
+                const errMsg = t(`errors.${errorKey}`) || errorKey;
+                fileInfoSpan.innerHTML = `❌ ${errMsg}`;
+                lineCountSpan.textContent = '—';
+                codeDisplay.textContent = `⚠️ ${errMsg}`;
+                codeDisplay.classList.add('empty-code-placeholder');
+                copyBtn.disabled = true;
+            }
+            else {
+                // нет файла
+                fileInfoSpan.innerHTML = `📭 ${t('noFile')}`;
+                lineCountSpan.textContent = '—';
+                codeDisplay.textContent = t('emptyCode');
+                codeDisplay.classList.add('empty-code-placeholder');
+                copyBtn.disabled = true;
+            }
+        }
+
+        function resetToEmpty() {
+            currentCode = '';
+            currentFileName = null;
+            currentFileSize = null;
+            currentLines = null;
+            errorState = false;
+            errorKey = '';
+            updateUIByLanguage();
+        }
+
+        function setError(errKey) {
+            errorState = true;
+            errorKey = errKey;
+            currentCode = '';
+            currentFileName = null;
+            currentFileSize = null;
+            currentLines = null;
+            updateUIByLanguage();
+        }
+
+        function loadFileSuccess(content, name, size) {
+            currentCode = content;
+            currentFileName = name;
+            currentFileSize = size;
+            const linesArray = content.split(/\r\n|\r|\n/);
+            currentLines = linesArray.length;
+            errorState = false;
+            updateUIByLanguage();
+        }
+
+        function handleFile(file) {
+            if (!file) {
+                resetToEmpty();
+                return;
+            }
+            const isHtml = file.type === 'text/html' || 
+                           file.type === 'application/xhtml+xml' ||
+                           file.name.toLowerCase().endsWith('.html') || 
+                           file.name.toLowerCase().endsWith('.htm');
+            if (!isHtml) {
+                setError('notHtml');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                loadFileSuccess(e.target.result, file.name, file.size);
+            };
+            reader.onerror = () => {
+                setError('readFailed');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // ---- Ивенты ----
+        chooseBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length) handleFile(fileInput.files[0]);
+            fileInput.value = '';
+        });
+
+        // Drag & drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+            dropZone.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        dropZone.addEventListener('dragenter', () => dropZone.classList.add('drag-over'));
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length) handleFile(files[0]);
+            else resetToEmpty();
+            fileInput.value = '';
+        });
+
+        // копирование с фидбеком
+        copyBtn.addEventListener('click', async () => {
+            if (!currentCode || errorState) {
+                alert(t('noCodeAlert'));
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(currentCode);
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = `✅ ${t('copySuccess').replace(/✅/, '').trim()}`;
+                setTimeout(() => {
+                    copyBtn.innerHTML = t('copyBtn');
+                }, 1500);
+            } catch (err) {
+                alert(t('copyError') + ': ' + err);
+            }
+        });
+
+        // переключение языка
+        const langButtons = document.querySelectorAll('.lang-option');
+        function setLanguage(lang) {
+            if (lang === currentLang) return;
+            currentLang = lang;
+            langButtons.forEach(btn => {
+                const btnLang = btn.getAttribute('data-lang');
+                if (btnLang === lang) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            updateUIByLanguage();
+        }
+        langButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const lang = btn.getAttribute('data-lang');
+                setLanguage(lang);
+            });
+        });
+
+        // защита от открытия файлов в браузере
+        window.addEventListener('dragover', (e) => e.preventDefault());
+        window.addEventListener('drop', (e) => e.preventDefault());
+
+        // Инициализация: русский по умолчанию
+        setLanguage('ru');
+        resetToEmpty();
+    })();
+</script>
+</body>
+</html>
